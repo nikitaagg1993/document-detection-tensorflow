@@ -28,7 +28,7 @@ const preprocessImage = (imagePath) => {
             // Let's stick to high contrast + binarization for now which is faster.
 
             // 1. Contrast Stretching
-            const contrast = 2.0; // High contrast
+            const contrast = 1.2; // Moderate contrast (1.0 is no change)
             const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
 
             for (let i = 0; i < data.length; i += 4) {
@@ -36,13 +36,9 @@ const preprocessImage = (imagePath) => {
                 const newValue = factor * (val - 128) + 128;
                 const clamped = Math.max(0, Math.min(255, newValue));
 
-                // 2. Binarization
-                // Simple thresholding often works better for OCR after contrast verify
-                const binary = clamped > 140 ? 255 : 0;
-
-                data[i] = binary;
-                data[i + 1] = binary;
-                data[i + 2] = binary;
+                data[i] = clamped;
+                data[i + 1] = clamped;
+                data[i + 2] = clamped;
             }
 
             ctx.putImageData(imageData, 0, 0);
@@ -64,9 +60,15 @@ export const performOCR = async (imagePath) => {
                 logger: m => console.log(m)
             }
         );
-        return result.data.text;
+        return {
+            text: result.data.text,
+            debugImage: processedImage
+        };
     } catch (error) {
         console.error("OCR Error:", error);
-        return "Failed to extract text.";
+        return {
+            text: "Failed to extract text.",
+            debugImage: null
+        };
     }
 };

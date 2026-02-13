@@ -8,7 +8,8 @@ function App() {
   const [videoElement, setVideoElement] = useState(null);
   const [capturedImage, setCapturedImage] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [ocrResult, setOcrResult] = useState("");
+  const [ocrText, setOcrText] = useState("Scanning...");
+  const [debugImage, setDebugImage] = useState(null);
 
   const handleVideoReady = (video) => {
     setVideoElement(video);
@@ -17,17 +18,22 @@ function App() {
   const handleCapture = async (imageData) => {
     setCapturedImage(imageData);
     setIsProcessing(true);
-    setOcrResult("");
+    setOcrText("");
+    setDebugImage(null);
 
     console.log("Image captured! Starting OCR...");
-    const text = await performOCR(imageData);
-    setOcrResult(text);
+    const { text, debugImage } = await performOCR(imageData);
+    setOcrText(text);
+    if (debugImage) {
+      setDebugImage(debugImage);
+    }
     setIsProcessing(false);
   };
 
   const resetCapture = () => {
     setCapturedImage(null);
-    setOcrResult("");
+    setOcrText("");
+    setDebugImage(null);
     setIsProcessing(false);
   };
 
@@ -52,7 +58,18 @@ function App() {
             </>
           ) : (
             <div className="preview-container">
-              <img src={capturedImage} alt="Captured Document" className="captured-image" />
+              <div className="images-row">
+                <div className="image-col">
+                  <h3>Original</h3>
+                  <img src={capturedImage} alt="Captured Document" className="captured-image" />
+                </div>
+                {debugImage && (
+                  <div className="image-col">
+                    <h3>Preprocessed (OCR Input)</h3>
+                    <img src={debugImage} alt="Debug Preprocessed" className="captured-image debug-image" />
+                  </div>
+                )}
+              </div>
 
               <div className="ocr-results">
                 <h2>Extracted Text</h2>
@@ -60,20 +77,22 @@ function App() {
                   <p className="processing-text">Processing OCR... (this may take a moment)</p>
                 ) : (
                   <div className="text-output">
-                    {ocrResult ? <pre>{ocrResult}</pre> : <p>No text found.</p>}
+                    {ocrText ? <pre>{ocrText}</pre> : <p>No text found.</p>}
                   </div>
                 )}
               </div>
 
-              <button className="action-button" onClick={resetCapture}>Retake</button>
-              <a
-                href={capturedImage}
-                download="captured_document.jpg"
-                className="action-button download-button"
-                style={{ marginLeft: '10px', textDecoration: 'none', display: 'inline-block' }}
-              >
-                Download
-              </a>
+              <div className="actions">
+                <button className="action-button" onClick={resetCapture}>Retake</button>
+                <a
+                  href={capturedImage}
+                  download="captured_document.jpg"
+                  className="action-button download-button"
+                  style={{ marginLeft: '10px', textDecoration: 'none', display: 'inline-block' }}
+                >
+                  Download
+                </a>
+              </div>
             </div>
           )}
         </div>
