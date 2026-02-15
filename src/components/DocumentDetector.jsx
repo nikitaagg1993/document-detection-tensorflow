@@ -21,7 +21,7 @@ const DocumentDetector = ({ videoElement, onCapture }) => {
             try {
                 const loadedModel = await cocoSsd.load({
                     base: 'lite_mobilenet_v2',
-                    modelUrl: '/models/lite_mobilenet_v2/model.json'
+                    modelUrl: 'https://cdn.jsdelivr.net/gh/nikitaagg1993/document-detection-tensorflow@main/public/models/lite_mobilenet_v2/model.json'
                 });
                 setModel(loadedModel);
                 setStatus("Align document to capture");
