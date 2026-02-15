@@ -18,7 +18,10 @@ const DocumentDetector = ({ videoElement, onCapture }) => {
     useEffect(() => {
         const loadModel = async () => {
             try {
-                const loadedModel = await cocoSsd.load();
+                const loadedModel = await cocoSsd.load({
+                    base: 'mobilenet_v2', // or lite_mobilenet_v2
+                    modelUrl: '/models/ssd_mobilenet_v2/model.json'
+                });
                 setModel(loadedModel);
                 setStatus("Align document to capture");
             } catch (err) {
