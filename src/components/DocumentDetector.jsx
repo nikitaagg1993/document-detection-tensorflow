@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import * as cocoSsd from '@tensorflow-models/coco-ssd';
 import '@tensorflow/tfjs';
 
-const STABILITY_THRESHOLD = 20; // Approximately 0.7s at 30fps
+const STABILITY_THRESHOLD = 15; // Snappier capture
 const RELATIVE_MOVEMENT_LIMIT = 0.02; // 2% of frame width/height
 const EMA_ALPHA = 0.3; // Smoothing factor (0-1), lower is smoother but slower
 
@@ -14,6 +14,51 @@ const DocumentDetector = ({ videoElement, onCapture }) => {
     const [status, setStatus] = useState("Loading model...");
     const [stabilityCounter, setStabilityCounter] = useState(0);
     const [isDetected, setIsDetected] = useState(false);
+    const [liveDocType, setLiveDocType] = useState(null);
+    const samplingCanvasRef = useRef(document.createElement('canvas'));
+
+    const classifyDocument = (source, width, height) => {
+        const samplingCanvas = samplingCanvasRef.current;
+        const sWidth = 100; // Small size for performance
+        const sHeight = 100;
+        samplingCanvas.width = sWidth;
+        samplingCanvas.height = sHeight;
+        const sCtx = samplingCanvas.getContext('2d', { willReadFrequently: true });
+
+        // Draw the source (can be video or canvas) to the small sampling canvas
+        sCtx.drawImage(source, 0, 0, width, height, 0, 0, sWidth, sHeight);
+
+        const imageData = sCtx.getImageData(0, 0, sWidth, sHeight).data;
+        let r = 0, g = 0, b = 0;
+        const totalPixels = sWidth * sHeight;
+
+        for (let i = 0; i < imageData.length; i += 4) {
+            r += imageData[i];
+            g += imageData[i + 1];
+            b += imageData[i + 2];
+        }
+
+        const avgR = r / totalPixels;
+        const avgG = g / totalPixels;
+        const avgB = b / totalPixels;
+
+        console.log(`Average Colors - R: ${avgR.toFixed(1)}, G: ${avgG.toFixed(1)}, B: ${avgB.toFixed(1)}`);
+
+        const maxRGB = Math.max(avgR, avgG, avgB);
+        const minRGB = Math.min(avgR, avgG, avgB);
+        const diff = maxRGB - minRGB;
+
+        // PAN: Subtle blue/cyan bias.
+        if (avgB > avgG + 2 && avgB > avgR - 10) {
+            return "PAN";
+        }
+        // DL: Bright, neutral or yellowish (Indian DLs often have yellowish/white tones).
+        // Loosened thresholds: R/G > 100, diff < 50 to account for photos/text and lighting.
+        else if (avgR > 100 && avgG > 100 && diff < 50) {
+            return "Driving License";
+        }
+        return "Unknown Document";
+    };
 
     // Load model
     useEffect(() => {
@@ -66,7 +111,7 @@ const DocumentDetector = ({ videoElement, onCapture }) => {
                 const isDocumentLike = ['book', 'cell phone', 'laptop', 'handbag', 'suitcase'].includes(prediction.class);
                 const area = width * height;
                 const frameArea = videoWidth * videoHeight;
-                const isLarge = area > (frameArea * 0.15);
+                const isLarge = area > (frameArea * 0.12); // Account for documents further away
 
                 const centerX = x + width / 2;
                 const centerY = y + height / 2;
@@ -107,6 +152,10 @@ const DocumentDetector = ({ videoElement, onCapture }) => {
                 ctx.setLineDash([10, 5]);
                 ctx.strokeRect(x, y, width, height);
                 ctx.setLineDash([]);
+
+                // Live classification for feedback (sample from video directly)
+                const currentType = classifyDocument(videoElement, videoWidth, videoHeight);
+                if (mounted) setLiveDocType(currentType);
             }
 
             if (mounted) {
@@ -142,7 +191,8 @@ const DocumentDetector = ({ videoElement, onCapture }) => {
                         captureCanvas.height = sh;
                         captureCanvas.getContext('2d', { willReadFrequently: true }).drawImage(videoElement, sx, sy, sw, sh, 0, 0, sw, sh);
 
-                        onCapture(captureCanvas.toDataURL('image/jpeg', 0.9));
+                        const docType = classifyDocument(captureCanvas, sw, sh);
+                        onCapture(captureCanvas.toDataURL('image/jpeg', 0.9), docType);
                         return 0;
                     }
                     return newCount;
@@ -169,13 +219,13 @@ const DocumentDetector = ({ videoElement, onCapture }) => {
     useEffect(() => {
         if (stabilityCounter > 0) {
             const progress = Math.round((stabilityCounter / STABILITY_THRESHOLD) * 100);
-            setStatus(`Hold steady... ${progress}%`);
+            setStatus(`Hold steady... ${progress}% (${liveDocType || "Detecting..."})`);
         } else if (isDetected) {
-            setStatus("Hold steady to capture");
+            setStatus(liveDocType ? `Detected: ${liveDocType}. Hold steady.` : "Hold steady to capture");
         } else if (model) {
             setStatus("Align document within frame");
         }
-    }, [stabilityCounter, isDetected, model]);
+    }, [stabilityCounter, isDetected, model, liveDocType]);
 
     return (
         <>
