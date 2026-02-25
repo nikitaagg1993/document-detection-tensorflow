@@ -10,13 +10,15 @@ function App() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [ocrText, setOcrText] = useState("Scanning...");
   const [debugImage, setDebugImage] = useState(null);
+  const [docType, setDocType] = useState(null);
 
   const handleVideoReady = (video) => {
     setVideoElement(video);
   };
 
-  const handleCapture = async (imageData) => {
+  const handleCapture = async (imageData, type) => {
     setCapturedImage(imageData);
+    setDocType(type);
     setIsProcessing(true);
     setOcrText("");
     setDebugImage(null);
@@ -32,6 +34,7 @@ function App() {
 
   const resetCapture = () => {
     setCapturedImage(null);
+    setDocType(null);
     setOcrText("");
     setDebugImage(null);
     setIsProcessing(false);
@@ -41,7 +44,11 @@ function App() {
     <div className="app-container">
       <header>
         <h1>Document Detector Tensorflow</h1>
-        <p>{capturedImage ? "Review Capture" : "Align your document within the frame"}</p>
+        <p>
+          {capturedImage
+            ? `Review Capture - ${docType || "Unknown"}`
+            : "Align your document within the frame"}
+        </p>
       </header>
 
       <main>
