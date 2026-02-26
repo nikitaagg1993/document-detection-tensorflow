@@ -52,13 +52,13 @@ const DocumentDetector = ({ videoElement, onCapture }) => {
             return "Unknown Document";
         }
 
-        // 1. PAN: Teal/Blue bias (High relative Blue)
-        if (avgB > avgG && avgB > avgR - 10) {
+        // 1. PAN: Teal/Blue bias (Clear relative Blue advantage)
+        // Modern PAN cards are teal-dominant.
+        if (avgB > avgG + 5 && avgB > avgR - 5) {
             return "PAN";
         }
 
         // 2. Passport (Data Page): High brightness neutral/polycarbonate
-        // Polycarbonate data pages are very bright and usually more neutral than DLs
         if (avgR > 180 && avgG > 180 && avgB > 180 && diff < 30) {
             return "Passport (Data Page)";
         }
@@ -68,8 +68,9 @@ const DocumentDetector = ({ videoElement, onCapture }) => {
             return "Driving License";
         }
 
-        // 4. Voter ID / Neutral: Broad fallback for modern PVC cards
-        if (avgR > 80 && avgG > 80 && avgB > 80) {
+        // 4. Voter ID / Neutral: Targeted fallback for modern PVC cards
+        // Must be neutral (low diff) to avoid catching colored documents like PAN
+        if (avgR > 100 && avgG > 100 && avgB > 90 && diff < 40) {
             return "Voter ID";
         }
 
