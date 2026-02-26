@@ -56,16 +56,20 @@ const DocumentDetector = ({ videoElement, onCapture }) => {
         else if (avgR > 180 && avgG > 190 && avgB > 195) {
             return "Passport (Data Page)";
         }
-        // Passport Outer Cover: Very deep navy blue/black
+        // Passport Outer Cover (Navy/Black): Very deep navy blue/black
         else if (avgR < 50 && avgG < 50 && avgB < 80) {
+            return "Passport (Cover)";
+        }
+        // Passport Outer Cover (Orange/ECR): High Red, Moderate Green, Low Blue
+        else if (avgR > 140 && avgG > 100 && avgR > avgB + 60 && avgG > avgB) {
             return "Passport (Cover)";
         }
         // Voter ID: Tricolor background (Saffron, White, Green)
         else if (avgR > 140 && avgG > 140 && avgB > 120 && Math.abs(avgR - avgG) < 20) {
             return "Voter ID";
         }
-        // DL: Bright, neutral or yellowish
-        else if (avgR > 100 && avgG > 100 && diff < 50) {
+        // DL: Bright, neutral or yellowish, but NOT as strongly red/orange as a passport
+        else if (avgR > 100 && avgG > 100 && diff < 50 && avgR < avgB + 50) {
             return "Driving License";
         }
         return "Unknown Document";
