@@ -60,8 +60,18 @@ export const performOCR = async (imagePath) => {
                 logger: m => console.log(m)
             }
         );
+
+        let extractedText = result.data.text;
+
+        // Simple post-processing to identify common patterns
+        // EPIC Number: typically [A-Z]{3}[0-9]{7}
+        const epicMatch = extractedText.match(/[A-Z]{3}\d{7}/);
+        if (epicMatch) {
+            extractedText = `EPIC Number: ${epicMatch[0]}\n\n${extractedText}`;
+        }
+
         return {
-            text: result.data.text,
+            text: extractedText,
             debugImage: processedImage
         };
     } catch (error) {
