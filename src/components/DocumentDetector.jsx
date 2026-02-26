@@ -52,16 +52,19 @@ const DocumentDetector = ({ videoElement, onCapture }) => {
         if (avgB > avgG + 2 && avgB > avgR - 10) {
             return "PAN";
         }
+        // Passport Data Page: Light blue/grey with very high brightness
+        else if (avgR > 180 && avgG > 190 && avgB > 195) {
+            return "Passport (Data Page)";
+        }
+        // Passport Outer Cover: Very deep navy blue/black
+        else if (avgR < 50 && avgG < 50 && avgB < 80) {
+            return "Passport (Cover)";
+        }
         // Voter ID: Tricolor background (Saffron, White, Green)
-        // This often averages to a relatively neutral but slightly warm tone, 
-        // but let's look for specific tricolor balance or a "Voter ID" signature.
-        // Modern Voter ID (PVC) is very colorful.
         else if (avgR > 140 && avgG > 140 && avgB > 120 && Math.abs(avgR - avgG) < 20) {
-            // This is a common profile for the white/saffron mix area
             return "Voter ID";
         }
-        // DL: Bright, neutral or yellowish (Indian DLs often have yellowish/white tones).
-        // Loosened thresholds: R/G > 100, diff < 50 to account for photos/text and lighting.
+        // DL: Bright, neutral or yellowish
         else if (avgR > 100 && avgG > 100 && diff < 50) {
             return "Driving License";
         }

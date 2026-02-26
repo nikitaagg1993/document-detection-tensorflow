@@ -70,6 +70,17 @@ export const performOCR = async (imagePath) => {
             extractedText = `EPIC Number: ${epicMatch[0]}\n\n${extractedText}`;
         }
 
+        // Passport Number: typically A-Z followed by 7 digits
+        const passportMatch = extractedText.match(/[A-Z]\d{7}/);
+        if (passportMatch) {
+            extractedText = `Passport Number: ${passportMatch[0]}\n\n${extractedText}`;
+        }
+
+        // MRZ Check: Look for P<IND
+        if (extractedText.includes("P<IND")) {
+            extractedText = `MRZ Detected: True\n\n${extractedText}`;
+        }
+
         return {
             text: extractedText,
             debugImage: processedImage
