@@ -57,33 +57,14 @@ const DocumentDetector = ({ videoElement, onCapture }) => {
             return "PAN";
         }
 
-        // 2. Voter ID / Neutral White: Broad neutral profile
-        // Most modern PVC cards (Aadhaar/Voter ID) are bright neutral.
-        if (avgR > 120 && avgG > 120 && avgB > 110 && diff < 50) {
-            return "Voter ID";
-        }
-
-        // 1. Passport Outer Cover (Navy/Black or Orange/ECR) - Specific signatures
-        if (avgR < 60 && avgG < 60 && avgB < 90) {
-            return "Passport (Cover)";
-        }
-        if (avgR > 150 && avgG > 80 && avgR > avgB + 60) {
-            return "Passport (Cover)";
-        }
-
-        // 2. PAN: Teal/Blue bias (High relative Blue)
-        if (avgB > avgG && avgB > avgR - 5) {
-            return "PAN";
-        }
-
-        // 3. Passport (Data Page): Extremely high brightness polycarbonate
-        if (avgR > 210 && avgG > 210 && avgB > 210 && diff < 20) {
+        // 2. Passport (Data Page): High brightness neutral/polycarbonate
+        // Polycarbonate data pages are very bright and usually more neutral than DLs
+        if (avgR > 180 && avgR > 180 && avgB > 180 && diff < 30) {
             return "Passport (Data Page)";
         }
 
-        // 4. Driving License: Neutral or yellowish, moderate to high brightness
-        // Checked BEFORE the broader Voter ID to avoid misclassification
-        if (avgR > 140 && avgG > 140 && diff < 40) {
+        // 3. Driving License: Neutral or yellowish, moderate to high brightness
+        if (avgR > 140 && avgG > 140 && diff < 45) {
             return "Driving License";
         }
 
