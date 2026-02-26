@@ -45,6 +45,13 @@ const DocumentDetector = ({ videoElement, onCapture }) => {
 
         console.log(`Avg Colors: R=${avgR.toFixed(0)}, G=${avgG.toFixed(0)}, B=${avgB.toFixed(0)}, Diff=${diff.toFixed(0)}`);
 
+        // Brightness Safeguard: IDs (DL, Voter, PAN) are generally light-colored.
+        // If the document is too dark (e.g., a chair or shadow), don't classify it.
+        const brightness = (avgR + avgG + avgB) / 3;
+        if (brightness < 60) {
+            return "Unknown Document";
+        }
+
         // 1. PAN: Teal/Blue bias (High relative Blue)
         if (avgB > avgG && avgB > avgR - 5) {
             return "PAN";
@@ -124,11 +131,11 @@ const DocumentDetector = ({ videoElement, onCapture }) => {
             predictions.forEach(prediction => {
                 const [x, y, width, height] = prediction.bbox;
 
-                // Detection criteria - Expanded classes for better card recognition
-                const isDocumentLike = ['book', 'cell phone', 'laptop', 'handbag', 'suitcase', 'remote', 'mouse'].includes(prediction.class);
+                // Detection criteria - Tightened for better card recognition
+                const isDocumentLike = ['book', 'cell phone', 'laptop'].includes(prediction.class);
                 const area = width * height;
                 const frameArea = videoWidth * videoHeight;
-                const isLarge = area > (frameArea * 0.10); // More inclusive area requirement
+                const isLarge = area > (frameArea * 0.10);
 
                 const centerX = x + width / 2;
                 const centerY = y + height / 2;
@@ -138,10 +145,10 @@ const DocumentDetector = ({ videoElement, onCapture }) => {
                     centerY < (videoHeight * 0.85);
 
                 const isPerson = prediction.class === 'person';
-                // Lowered confidence and broadened criteria for straight-on shots
-                const isProminent = !isPerson && prediction.score > 0.35 && isLarge && isCentered;
+                // Increased confidence to 0.45 to reduce false positives
+                const isProminent = !isPerson && prediction.score > 0.45 && isLarge && isCentered;
 
-                if ((isDocumentLike && prediction.score > 0.4) || isProminent) {
+                if ((isDocumentLike && prediction.score > 0.5) || isProminent) {
                     if (!bestPrediction || prediction.score > bestPrediction.score) {
                         bestPrediction = prediction;
                     }
