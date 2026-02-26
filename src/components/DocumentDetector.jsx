@@ -124,23 +124,24 @@ const DocumentDetector = ({ videoElement, onCapture }) => {
             predictions.forEach(prediction => {
                 const [x, y, width, height] = prediction.bbox;
 
-                // Detection criteria
-                const isDocumentLike = ['book', 'cell phone', 'laptop', 'handbag', 'suitcase'].includes(prediction.class);
+                // Detection criteria - Expanded classes for better card recognition
+                const isDocumentLike = ['book', 'cell phone', 'laptop', 'handbag', 'suitcase', 'remote', 'mouse'].includes(prediction.class);
                 const area = width * height;
                 const frameArea = videoWidth * videoHeight;
-                const isLarge = area > (frameArea * 0.12); // Account for documents further away
+                const isLarge = area > (frameArea * 0.10); // More inclusive area requirement
 
                 const centerX = x + width / 2;
                 const centerY = y + height / 2;
-                const isCentered = centerX > (videoWidth * 0.2) &&
-                    centerX < (videoWidth * 0.8) &&
-                    centerY > (videoHeight * 0.2) &&
-                    centerY < (videoHeight * 0.8);
+                const isCentered = centerX > (videoWidth * 0.15) &&
+                    centerX < (videoWidth * 0.85) &&
+                    centerY > (videoHeight * 0.15) &&
+                    centerY < (videoHeight * 0.85);
 
                 const isPerson = prediction.class === 'person';
-                const isProminent = !isPerson && prediction.score > 0.4 && isLarge && isCentered;
+                // Lowered confidence and broadened criteria for straight-on shots
+                const isProminent = !isPerson && prediction.score > 0.35 && isLarge && isCentered;
 
-                if ((isDocumentLike && prediction.score > 0.5) || isProminent) {
+                if ((isDocumentLike && prediction.score > 0.4) || isProminent) {
                     if (!bestPrediction || prediction.score > bestPrediction.score) {
                         bestPrediction = prediction;
                     }
@@ -190,7 +191,8 @@ const DocumentDetector = ({ videoElement, onCapture }) => {
                 setStabilityCounter(prev => {
                     // Adaptive stability check
                     if (distance > moveLimit) {
-                        return Math.max(0, prev - 2); // Soft reset: decay instead of instant wipe
+                        // More tolerant decay: only decay if movement is significant
+                        return Math.max(0, prev - 1);
                     }
 
                     const newCount = prev + 1;
