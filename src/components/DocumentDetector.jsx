@@ -53,23 +53,23 @@ const DocumentDetector = ({ videoElement, onCapture }) => {
         }
 
         // 1. PAN: Teal/Blue bias (High relative Blue)
-        if (avgB > avgG && avgB > avgR - 5) {
+        if (avgB > avgG && avgB > avgR - 10) {
             return "PAN";
         }
 
         // 2. Passport (Data Page): High brightness neutral/polycarbonate
         // Polycarbonate data pages are very bright and usually more neutral than DLs
-        if (avgR > 180 && avgR > 180 && avgB > 180 && diff < 30) {
+        if (avgR > 180 && avgG > 180 && avgB > 180 && diff < 30) {
             return "Passport (Data Page)";
         }
 
         // 3. Driving License: Neutral or yellowish, moderate to high brightness
-        if (avgR > 140 && avgG > 140 && diff < 45) {
+        if (avgR > 120 && avgG > 120 && diff < 50) {
             return "Driving License";
         }
 
-        // 5. Voter ID / Neutral: Broad fallback for modern PVC cards
-        if (avgR > 110 && avgG > 110 && avgB > 100 && diff < 60) {
+        // 4. Voter ID / Neutral: Broad fallback for modern PVC cards
+        if (avgR > 80 && avgG > 80 && avgB > 80) {
             return "Voter ID";
         }
 
