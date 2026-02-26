@@ -19,15 +19,13 @@ const DocumentDetector = ({ videoElement, onCapture }) => {
 
     const classifyDocument = (source, width, height) => {
         const samplingCanvas = samplingCanvasRef.current;
-        const sWidth = 100; // Small size for performance
+        const sWidth = 100;
         const sHeight = 100;
         samplingCanvas.width = sWidth;
         samplingCanvas.height = sHeight;
         const sCtx = samplingCanvas.getContext('2d', { willReadFrequently: true });
 
-        // Draw the source (can be video or canvas) to the small sampling canvas
         sCtx.drawImage(source, 0, 0, width, height, 0, 0, sWidth, sHeight);
-
         const imageData = sCtx.getImageData(0, 0, sWidth, sHeight).data;
         let r = 0, g = 0, b = 0;
         const totalPixels = sWidth * sHeight;
@@ -41,38 +39,38 @@ const DocumentDetector = ({ videoElement, onCapture }) => {
         const avgR = r / totalPixels;
         const avgG = g / totalPixels;
         const avgB = b / totalPixels;
-
-        console.log(`Average Colors - R: ${avgR.toFixed(1)}, G: ${avgG.toFixed(1)}, B: ${avgB.toFixed(1)}`);
-
         const maxRGB = Math.max(avgR, avgG, avgB);
         const minRGB = Math.min(avgR, avgG, avgB);
         const diff = maxRGB - minRGB;
 
-        // Passport Outer Cover (Navy/Black or Orange/ECR)
-        if (avgR < 50 && avgG < 50 && avgB < 80) {
-            return "Passport (Cover)";
-        }
-        if (avgR > 150 && avgG > 100 && avgR > avgB + 50) {
-            return "Passport (Cover)";
-        }
+        console.log(`Avg Colors: R=${avgR.toFixed(0)}, G=${avgG.toFixed(0)}, B=${avgB.toFixed(0)}, Diff=${diff.toFixed(0)}`);
 
-        // PAN: Cyan/Teal background bias
-        if (avgB > avgG && avgB > avgR - 15) {
+        // 1. PAN: Teal/Blue bias (High relative Blue)
+        if (avgB > avgG && avgB > avgR - 5) {
             return "PAN";
         }
 
-        // Passport Data Page: Extremely bright white polycarbonate
-        if (avgR > 210 && avgG > 210 && avgB > 210 && diff < 20) {
-            return "Passport (Data Page)";
-        }
-
-        // Voter ID: Tricolor or Neutral White (Modern PVC)
-        if (avgR > 130 && avgG > 130 && avgB > 120 && diff < 40) {
+        // 2. Voter ID / Neutral White: Broad neutral profile
+        // Most modern PVC cards (Aadhaar/Voter ID) are bright neutral.
+        if (avgR > 120 && avgG > 120 && avgB > 110 && diff < 50) {
             return "Voter ID";
         }
 
-        // DL: Neutral or yellowish, moderate brightness
-        if (avgR > 100 && avgG > 100 && diff < 50) {
+        // 3. Passport (Cover - Navy or Orange)
+        if (avgR < 60 && avgG < 60 && avgB < 90) {
+            return "Passport (Cover)";
+        }
+        if (avgR > 150 && avgG > 80 && avgR > avgB + 60) {
+            return "Passport (Cover)";
+        }
+
+        // 4. Passport (Data Page): Extremely high brightness
+        if (avgR > 215 && avgG > 215 && avgB > 215) {
+            return "Passport (Data Page)";
+        }
+
+        // 5. Driving License: Fallback for neutral but less bright than Voter IDs often are
+        if (avgR > 90 && avgG > 90 && diff < 60) {
             return "Driving License";
         }
 
