@@ -63,7 +63,7 @@ const DocumentDetector = ({ videoElement, onCapture }) => {
             return "Voter ID";
         }
 
-        // 3. Passport (Cover - Navy or Orange)
+        // 1. Passport Outer Cover (Navy/Black or Orange/ECR) - Specific signatures
         if (avgR < 60 && avgG < 60 && avgB < 90) {
             return "Passport (Cover)";
         }
@@ -71,14 +71,25 @@ const DocumentDetector = ({ videoElement, onCapture }) => {
             return "Passport (Cover)";
         }
 
-        // 4. Passport (Data Page): Extremely high brightness
-        if (avgR > 215 && avgG > 215 && avgB > 215) {
+        // 2. PAN: Teal/Blue bias (High relative Blue)
+        if (avgB > avgG && avgB > avgR - 5) {
+            return "PAN";
+        }
+
+        // 3. Passport (Data Page): Extremely high brightness polycarbonate
+        if (avgR > 210 && avgG > 210 && avgB > 210 && diff < 20) {
             return "Passport (Data Page)";
         }
 
-        // 5. Driving License: Fallback for neutral but less bright than Voter IDs often are
-        if (avgR > 90 && avgG > 90 && diff < 60) {
+        // 4. Driving License: Neutral or yellowish, moderate to high brightness
+        // Checked BEFORE the broader Voter ID to avoid misclassification
+        if (avgR > 140 && avgG > 140 && diff < 40) {
             return "Driving License";
+        }
+
+        // 5. Voter ID / Neutral: Broad fallback for modern PVC cards
+        if (avgR > 110 && avgG > 110 && avgB > 100 && diff < 60) {
+            return "Voter ID";
         }
 
         return "Unknown Document";
@@ -131,8 +142,8 @@ const DocumentDetector = ({ videoElement, onCapture }) => {
             predictions.forEach(prediction => {
                 const [x, y, width, height] = prediction.bbox;
 
-                // Detection criteria - Tightened for better card recognition
-                const isDocumentLike = ['book', 'cell phone', 'laptop'].includes(prediction.class);
+                // Detection criteria - Balanced for robustness and false-positive protection
+                const isDocumentLike = ['book', 'cell phone', 'laptop', 'handbag'].includes(prediction.class);
                 const area = width * height;
                 const frameArea = videoWidth * videoHeight;
                 const isLarge = area > (frameArea * 0.10);
@@ -145,10 +156,10 @@ const DocumentDetector = ({ videoElement, onCapture }) => {
                     centerY < (videoHeight * 0.85);
 
                 const isPerson = prediction.class === 'person';
-                // Increased confidence to 0.45 to reduce false positives
-                const isProminent = !isPerson && prediction.score > 0.45 && isLarge && isCentered;
+                // Confidence set to 0.4 (balanced)
+                const isProminent = !isPerson && prediction.score > 0.40 && isLarge && isCentered;
 
-                if ((isDocumentLike && prediction.score > 0.5) || isProminent) {
+                if ((isDocumentLike && prediction.score > 0.45) || isProminent) {
                     if (!bestPrediction || prediction.score > bestPrediction.score) {
                         bestPrediction = prediction;
                     }
