@@ -52,8 +52,8 @@ const DocumentDetector = ({ videoElement, onCapture }) => {
         if (avgB > avgG + 2 && avgB > avgR - 10) {
             return "PAN";
         }
-        // Passport Data Page: Light blue/grey with very high brightness
-        else if (avgR > 180 && avgG > 190 && avgB > 195) {
+        // Passport Data Page: Bright white/neutral profile
+        else if (avgR > 180 && avgG > 180 && avgB > 180 && diff < 30) {
             return "Passport (Data Page)";
         }
         // Passport Outer Cover (Navy/Black): Very deep navy blue/black
@@ -61,15 +61,16 @@ const DocumentDetector = ({ videoElement, onCapture }) => {
             return "Passport (Cover)";
         }
         // Passport Outer Cover (Orange/ECR): High Red, Moderate Green, Low Blue
-        else if (avgR > 140 && avgG > 100 && avgR > avgB + 60 && avgG > avgB) {
+        else if (avgR > 150 && avgG > 100 && avgR > avgB + 50) {
             return "Passport (Cover)";
         }
         // Voter ID: Tricolor background (Saffron, White, Green)
         else if (avgR > 140 && avgG > 140 && avgB > 120 && Math.abs(avgR - avgG) < 20) {
             return "Voter ID";
         }
-        // DL: Bright, neutral or yellowish, but NOT as strongly red/orange as a passport
-        else if (avgR > 100 && avgG > 100 && diff < 50 && avgR < avgB + 50) {
+        // DL: Bright, neutral or yellowish, but restricted to avoid bright passport pages
+        // Lowering max brightness for DL to distinguish from passport data page
+        else if (avgR > 100 && avgG > 100 && avgR < 180 && diff < 40 && avgR < avgB + 40) {
             return "Driving License";
         }
         return "Unknown Document";
