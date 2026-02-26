@@ -70,12 +70,6 @@ function App() {
                   <h3>Original</h3>
                   <img src={capturedImage} alt="Captured Document" className="captured-image" />
                 </div>
-                {debugImage && (
-                  <div className="image-col">
-                    <h3>Preprocessed (OCR Input)</h3>
-                    <img src={debugImage} alt="Debug Preprocessed" className="captured-image debug-image" />
-                  </div>
-                )}
               </div>
 
               <div className="ocr-results">

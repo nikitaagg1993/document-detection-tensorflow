@@ -19,15 +19,13 @@ const DocumentDetector = ({ videoElement, onCapture }) => {
 
     const classifyDocument = (source, width, height) => {
         const samplingCanvas = samplingCanvasRef.current;
-        const sWidth = 100; // Small size for performance
+        const sWidth = 100;
         const sHeight = 100;
         samplingCanvas.width = sWidth;
         samplingCanvas.height = sHeight;
         const sCtx = samplingCanvas.getContext('2d', { willReadFrequently: true });
 
-        // Draw the source (can be video or canvas) to the small sampling canvas
         sCtx.drawImage(source, 0, 0, width, height, 0, 0, sWidth, sHeight);
-
         const imageData = sCtx.getImageData(0, 0, sWidth, sHeight).data;
         let r = 0, g = 0, b = 0;
         const totalPixels = sWidth * sHeight;
@@ -41,30 +39,41 @@ const DocumentDetector = ({ videoElement, onCapture }) => {
         const avgR = r / totalPixels;
         const avgG = g / totalPixels;
         const avgB = b / totalPixels;
-
-        console.log(`Average Colors - R: ${avgR.toFixed(1)}, G: ${avgG.toFixed(1)}, B: ${avgB.toFixed(1)}`);
-
         const maxRGB = Math.max(avgR, avgG, avgB);
         const minRGB = Math.min(avgR, avgG, avgB);
         const diff = maxRGB - minRGB;
 
-        // PAN: Subtle blue/cyan bias.
-        if (avgB > avgG + 2 && avgB > avgR - 10) {
+        console.log(`Avg Colors: R=${avgR.toFixed(0)}, G=${avgG.toFixed(0)}, B=${avgB.toFixed(0)}, Diff=${diff.toFixed(0)}`);
+
+        // Brightness Safeguard: IDs (DL, Voter, PAN) are generally light-colored.
+        // If the document is too dark (e.g., a chair or shadow), don't classify it.
+        const brightness = (avgR + avgG + avgB) / 3;
+        if (brightness < 60) {
+            return "Unknown Document";
+        }
+
+        // 1. PAN: Teal/Blue bias (Clear relative Blue advantage)
+        // Modern PAN cards are teal-dominant.
+        if (avgB > avgG + 5 && avgB > avgR - 5) {
             return "PAN";
         }
-        // Voter ID: Tricolor background (Saffron, White, Green)
-        // This often averages to a relatively neutral but slightly warm tone, 
-        // but let's look for specific tricolor balance or a "Voter ID" signature.
-        // Modern Voter ID (PVC) is very colorful.
-        else if (avgR > 140 && avgG > 140 && avgB > 120 && Math.abs(avgR - avgG) < 20) {
-            // This is a common profile for the white/saffron mix area
-            return "Voter ID";
+
+        // 2. Passport (Data Page): High brightness neutral/polycarbonate
+        if (avgR > 180 && avgG > 180 && avgB > 180 && diff < 30) {
+            return "Passport (Data Page)";
         }
-        // DL: Bright, neutral or yellowish (Indian DLs often have yellowish/white tones).
-        // Loosened thresholds: R/G > 100, diff < 50 to account for photos/text and lighting.
-        else if (avgR > 100 && avgG > 100 && diff < 50) {
+
+        // 3. Driving License: Neutral or yellowish, moderate to high brightness
+        if (avgR > 120 && avgG > 120 && diff < 50) {
             return "Driving License";
         }
+
+        // 4. Voter ID / Neutral: Targeted fallback for modern PVC cards
+        // Must be neutral (low diff) to avoid catching colored documents like PAN
+        if (avgR > 100 && avgG > 100 && avgB > 90 && diff < 40) {
+            return "Voter ID";
+        }
+
         return "Unknown Document";
     };
 
@@ -115,23 +124,24 @@ const DocumentDetector = ({ videoElement, onCapture }) => {
             predictions.forEach(prediction => {
                 const [x, y, width, height] = prediction.bbox;
 
-                // Detection criteria
-                const isDocumentLike = ['book', 'cell phone', 'laptop', 'handbag', 'suitcase'].includes(prediction.class);
+                // Detection criteria - Balanced for robustness and false-positive protection
+                const isDocumentLike = ['book', 'cell phone', 'laptop', 'handbag'].includes(prediction.class);
                 const area = width * height;
                 const frameArea = videoWidth * videoHeight;
-                const isLarge = area > (frameArea * 0.12); // Account for documents further away
+                const isLarge = area > (frameArea * 0.10);
 
                 const centerX = x + width / 2;
                 const centerY = y + height / 2;
-                const isCentered = centerX > (videoWidth * 0.2) &&
-                    centerX < (videoWidth * 0.8) &&
-                    centerY > (videoHeight * 0.2) &&
-                    centerY < (videoHeight * 0.8);
+                const isCentered = centerX > (videoWidth * 0.15) &&
+                    centerX < (videoWidth * 0.85) &&
+                    centerY > (videoHeight * 0.15) &&
+                    centerY < (videoHeight * 0.85);
 
                 const isPerson = prediction.class === 'person';
-                const isProminent = !isPerson && prediction.score > 0.4 && isLarge && isCentered;
+                // Confidence set to 0.4 (balanced)
+                const isProminent = !isPerson && prediction.score > 0.40 && isLarge && isCentered;
 
-                if ((isDocumentLike && prediction.score > 0.5) || isProminent) {
+                if ((isDocumentLike && prediction.score > 0.45) || isProminent) {
                     if (!bestPrediction || prediction.score > bestPrediction.score) {
                         bestPrediction = prediction;
                     }
@@ -181,7 +191,8 @@ const DocumentDetector = ({ videoElement, onCapture }) => {
                 setStabilityCounter(prev => {
                     // Adaptive stability check
                     if (distance > moveLimit) {
-                        return Math.max(0, prev - 2); // Soft reset: decay instead of instant wipe
+                        // More tolerant decay: only decay if movement is significant
+                        return Math.max(0, prev - 1);
                     }
 
                     const newCount = prev + 1;
