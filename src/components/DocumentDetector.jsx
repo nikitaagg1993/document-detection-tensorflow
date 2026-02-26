@@ -48,31 +48,34 @@ const DocumentDetector = ({ videoElement, onCapture }) => {
         const minRGB = Math.min(avgR, avgG, avgB);
         const diff = maxRGB - minRGB;
 
-        // PAN: Subtle blue/cyan bias.
-        if (avgB > avgG + 2 && avgB > avgR - 10) {
+        // Passport Outer Cover (Navy/Black or Orange/ECR)
+        if (avgR < 50 && avgG < 50 && avgB < 80) {
+            return "Passport (Cover)";
+        }
+        if (avgR > 150 && avgG > 100 && avgR > avgB + 50) {
+            return "Passport (Cover)";
+        }
+
+        // PAN: Cyan/Teal background bias
+        if (avgB > avgG && avgB > avgR - 15) {
             return "PAN";
         }
-        // Passport Data Page: Bright white/neutral profile
-        else if (avgR > 180 && avgG > 180 && avgB > 180 && diff < 30) {
+
+        // Passport Data Page: Extremely bright white polycarbonate
+        if (avgR > 210 && avgG > 210 && avgB > 210 && diff < 20) {
             return "Passport (Data Page)";
         }
-        // Passport Outer Cover (Navy/Black): Very deep navy blue/black
-        else if (avgR < 50 && avgG < 50 && avgB < 80) {
-            return "Passport (Cover)";
-        }
-        // Passport Outer Cover (Orange/ECR): High Red, Moderate Green, Low Blue
-        else if (avgR > 150 && avgG > 100 && avgR > avgB + 50) {
-            return "Passport (Cover)";
-        }
-        // Voter ID: Tricolor background (Saffron, White, Green)
-        else if (avgR > 140 && avgG > 140 && avgB > 120 && Math.abs(avgR - avgG) < 20) {
+
+        // Voter ID: Tricolor or Neutral White (Modern PVC)
+        if (avgR > 130 && avgG > 130 && avgB > 120 && diff < 40) {
             return "Voter ID";
         }
-        // DL: Bright, neutral or yellowish, but restricted to avoid bright passport pages
-        // Lowering max brightness for DL to distinguish from passport data page
-        else if (avgR > 100 && avgG > 100 && avgR < 180 && diff < 40 && avgR < avgB + 40) {
+
+        // DL: Neutral or yellowish, moderate brightness
+        if (avgR > 100 && avgG > 100 && diff < 50) {
             return "Driving License";
         }
+
         return "Unknown Document";
     };
 
